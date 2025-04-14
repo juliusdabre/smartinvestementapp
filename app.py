@@ -99,6 +99,22 @@ fig_cluster = px.scatter_matrix(combined, dimensions=['SEIFA Score', 'AI Impact 
                                 color='Cluster', title="Clustering Analysis")
 st.plotly_chart(fig_cluster, use_container_width=True)
 
+# Merge key datasets for composite index
+combined = seifa_filtered.rename(columns={'Row Labels': 'SA3'})[['SA3', 'Average of Advantage Disadvantage Decile']]
+combined = combined.merge(
+    ai_filtered.rename(columns={'Row Labels': 'SA3', 'Sum of Total People Potentially  Impacted': 'AI Impact Score'}),
+    on='SA3', how='outer'
+)
+combined = combined.merge(
+    jobs_filtered[['Row Labels', 'Concentration Risk']].rename(columns={'Row Labels': 'SA3'}),
+    on='SA3', how='outer'
+)
+combined = combined.merge(
+    suburbs[['SA3_NAME21', 'Latitude', 'Longitude']].rename(columns={'SA3_NAME21': 'SA3'}),
+    on='SA3', how='left'
+)
+combined = combined.rename(columns={'Average of Advantage Disadvantage Decile': 'SEIFA Score'})
+
 # Download Section
 st.subheader("📥 Download Filtered Data")
 st.download_button("Download House Price Data", data=house_filtered.to_csv(index=False), file_name="house_price_data.csv")
