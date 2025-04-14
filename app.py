@@ -24,20 +24,22 @@ selected_regions = st.sidebar.multiselect("Select SA3 Region(s)", regions, defau
 
 # Filter data
 house_filtered = house_price[house_price['SA3'].isin(selected_regions)]
-vacancy_filtered = vacancy[vacancy['Region'].isin(selected_regions)]
-rents_filtered = rents[rents['Region'].isin(selected_regions)]
-seifa_filtered = seifa[seifa['Region'].isin(selected_regions)]
-ai_filtered = ai[ai['Region'].isin(selected_regions)]
+vacancy_filtered = vacancy[vacancy['SA3'].isin(selected_regions)]
+rents_filtered = rents[rents['SA3'].isin(selected_regions)]
+seifa_filtered = seifa[seifa['Row Labels'].isin(selected_regions)]
+ai_filtered = ai[ai['Row Labels'].isin(selected_regions)]
 jobs_filtered = jobs[jobs['Row Labels'].isin(selected_regions)]
 suburbs_filtered = suburbs[suburbs['SA3_NAME21'].isin(selected_regions)]
 
 # Merge key datasets for composite index
-combined = seifa_filtered[['Region', 'SEIFA Score']].merge(
-    ai_filtered[['Region', 'AI Impact Score']], on='Region', how='outer')
+combined = seifa_filtered.rename(columns={'Row Labels': 'SA3'})[['SA3', 'Average of Advantage Disadvantage Decile']]
 combined = combined.merge(
-    jobs_filtered[['Row Labels', 'Concentration Risk']], left_on='Region', right_on='Row Labels', how='outer')
+    ai_filtered.rename(columns={'Row Labels': 'SA3', 'Sum of Total People Potentially  Impacted': 'AI Impact Score'}), on='SA3', how='outer')
 combined = combined.merge(
-    suburbs[['SA3_NAME21', 'Latitude', 'Longitude']], left_on='Region', right_on='SA3_NAME21', how='left')
+    jobs_filtered[['Row Labels', 'Concentration Risk']].rename(columns={'Row Labels': 'SA3'}), on='SA3', how='outer')
+combined = combined.merge(
+    suburbs[['SA3_NAME21', 'Latitude', 'Longitude']].rename(columns={'SA3_NAME21': 'SA3'}), on='SA3', how='left')
+combined = combined.rename(columns={'Average of Advantage Disadvantage Decile': 'SEIFA Score'})
 combined['Investment Score'] = (
     (combined['SEIFA Score'].rank(ascending=True) + 
      combined['AI Impact Score'].rank(ascending=True) + 
@@ -55,32 +57,34 @@ st.plotly_chart(fig_price, use_container_width=True)
 st.header("📉 Vacancy & Rent Trends")
 col1, col2 = st.columns(2)
 with col1:
-    fig_vacancy = px.line(vacancy_filtered, x='Month', y='Vacancy Rate', color='Region', title="Vacancy Rate")
+    vacancy_melted = vacancy_filtered.melt(id_vars='SA3', var_name='Month', value_name='Vacancy Rate')
+    fig_vacancy = px.line(vacancy_melted, x='Month', y='Vacancy Rate', color='SA3', title="Vacancy Rate")
     st.plotly_chart(fig_vacancy, use_container_width=True)
 with col2:
-    fig_rent = px.line(rents_filtered, x='Month', y='Median Weekly Rent', color='Region', title="Rent Trend")
+    rent_melted = rents_filtered.melt(id_vars='SA3', var_name='Month', value_name='Median Weekly Rent')
+    fig_rent = px.line(rent_melted, x='Month', y='Median Weekly Rent', color='SA3', title="Rent Trend")
     st.plotly_chart(fig_rent, use_container_width=True)
 
 st.header("📊 SEIFA Scores")
-st.dataframe(seifa_filtered[['Region', 'SEIFA Score']], use_container_width=True)
+st.dataframe(seifa_filtered[['Row Labels', 'Average of Advantage Disadvantage Decile']], use_container_width=True)
 
 st.header("🧠 AI Impact Scores")
-st.dataframe(ai_filtered[['Region', 'AI Impact Score']], use_container_width=True)
+st.dataframe(ai_filtered[['Row Labels', 'Sum of Total People Potentially  Impacted']], use_container_width=True)
 
 st.header("💼 Job Concentration Risk")
 st.dataframe(jobs_filtered[['Row Labels', 'MAX', 'Concentration Risk']], use_container_width=True)
 
 st.header("⭐ Composite Investment Score")
-st.dataframe(combined[['Region', 'SEIFA Score', 'AI Impact Score', 'Concentration Risk', 'Investment Score']].dropna(), use_container_width=True)
+st.dataframe(combined[['SA3', 'SEIFA Score', 'AI Impact Score', 'Concentration Risk', 'Investment Score']].dropna(), use_container_width=True)
 
-fig_index = px.bar(combined.dropna(), x='Region', y='Investment Score', title="Composite Investment Score by Region", color='Investment Score')
+fig_index = px.bar(combined.dropna(), x='SA3', y='Investment Score', title="Composite Investment Score by Region", color='Investment Score')
 st.plotly_chart(fig_index, use_container_width=True)
 
 # Geo Map View
 st.header("🗺️ Investment Map View")
 map_data = combined.dropna(subset=['Latitude', 'Longitude'])
 fig_map = px.scatter_mapbox(map_data, lat="Latitude", lon="Longitude", size="Investment Score",
-                            color="Investment Score", hover_name="Region", zoom=4,
+                            color="Investment Score", hover_name="SA3", zoom=4,
                             mapbox_style="carto-positron", title="Map: Investment Scores by Region")
 st.plotly_chart(fig_map, use_container_width=True)
 
