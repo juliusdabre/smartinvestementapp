@@ -19,11 +19,11 @@ st.title("📊 Smart Investment Insights Dashboard")
 
 # Sidebar Filters
 st.sidebar.header("🔍 Filter Options")
-regions = sorted(list(set(house_price['Region'].dropna())))
+regions = sorted(list(set(house_price['SA3'].dropna())))
 selected_regions = st.sidebar.multiselect("Select SA3 Region(s)", regions, default=regions[:5])
 
 # Filter data
-house_filtered = house_price[house_price['Region'].isin(selected_regions)]
+house_filtered = house_price[house_price['SA3'].isin(selected_regions)]
 vacancy_filtered = vacancy[vacancy['Region'].isin(selected_regions)]
 rents_filtered = rents[rents['Region'].isin(selected_regions)]
 seifa_filtered = seifa[seifa['Region'].isin(selected_regions)]
@@ -47,7 +47,9 @@ combined = combined.sort_values("Investment Score")
 
 # Display Data Sections
 st.header("🏠 House Price Trends")
-fig_price = px.line(house_filtered, x='Month', y='Median Price', color='Region', title="House Price Trend")
+month_columns = [col for col in house_filtered.columns if col not in ['SA4', 'SA3']]
+house_melted = house_filtered.melt(id_vars=['SA3'], value_vars=month_columns, var_name='Month', value_name='Median Price')
+fig_price = px.line(house_melted, x='Month', y='Median Price', color='SA3', title="House Price Trend")
 st.plotly_chart(fig_price, use_container_width=True)
 
 st.header("📉 Vacancy & Rent Trends")
