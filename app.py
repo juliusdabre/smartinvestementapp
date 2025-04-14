@@ -29,7 +29,7 @@ rents_filtered = rents[rents['SA3'].isin(selected_regions)]
 seifa_filtered = seifa[seifa['Row Labels'].isin(selected_regions)]
 ai_filtered = ai[ai['Row Labels'].isin(selected_regions)]
 jobs_filtered = jobs[jobs['Row Labels'].isin(selected_regions)]
-suburbs_filtered = suburbs[suburbs['SA3_NAME'].isin(selected_regions)]
+suburbs_filtered = suburbs[suburbs['SA3 Code'].isin(selected_regions)]  # Replaced SA3_NAME with SA3 Code
 
 # Merge key datasets for composite index
 combined = seifa_filtered.rename(columns={'Row Labels': 'SA3'})[['SA3', 'Average of Advantage Disadvantage Decile']]
@@ -38,7 +38,7 @@ combined = combined.merge(
 combined = combined.merge(
     jobs_filtered[['Row Labels', 'Concentration Risk']].rename(columns={'Row Labels': 'SA3'}), on='SA3', how='outer')
 combined = combined.merge(
-    suburbs[['SA3_NAME', 'Latitude', 'Longitude']].rename(columns={'SA3_NAME': 'SA3'}), on='SA3', how='left')
+    suburbs[['SA3 Code', 'Latitude', 'Longitude']].rename(columns={'SA3 Code': 'SA3'}), on='SA3', how='left')  # Replaced SA3_NAME with SA3 Code
 combined = combined.rename(columns={'Average of Advantage Disadvantage Decile': 'SEIFA Score'})
 combined['Investment Score'] = (
     (combined['SEIFA Score'].rank(ascending=True) + 
